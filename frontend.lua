@@ -2,6 +2,7 @@ local userinputservice = game:GetService("UserInputService")
 local debounce = false
 local equipped = false
 local tool = script.Parent
+local player = game.Players.LocalPlayer
 local events = tool:WaitForChild("Events")
 local values = tool:WaitForChild("Settings") 
 local timestoptime = values:WaitForChild("Timestop")
@@ -21,20 +22,20 @@ userinputservice.InputBegan:Connect(function(input, gameprocessed)
 					debounce = true
 					TimeStop:FireServer()
 					
-					for i, v in pairs(game.Players:GetPlayers()) do
-						if v then
-							local clone = gui2:Clone()
-							local timer = timestoptime.Value
-							clone.Parent = v.PlayerGui
-							
-							repeat wait(1)
-								clone.Bar.Size = UDim2.new(0, timer * 103 , 0, 20)
-								timer -= 1
-							until timer <= 0
-							
-							clone:Destroy()
+					local clone = gui2:Clone()
+					local timer = timestoptime.Value
+					clone.Parent = player.PlayerGui
+					
+					repeat wait(1)
+						if clone then
+							clone.Bar.Size = UDim2.new(0, timer * 103 , 0, 20)
+							timer -= 1
+						else
+							break
 						end
-					end
+					until timer <= 0
+					
+					clone:Destroy()
 					
 					wait(timestoptime.Value + 40)
 					debounce = false
@@ -42,20 +43,20 @@ userinputservice.InputBegan:Connect(function(input, gameprocessed)
 					debounce = true
 					TimeAcceleration:FireServer()
 					
-					for i, v in pairs(game.Players:GetPlayers()) do
-						if v then
-							local clone = gui1:Clone()
-							local timer = timeaccerlerationtime.Value
-							clone.Parent = v.PlayerGui
+					local clone = gui1:Clone()
+					local timer = timeaccerlerationtime.Value
+					clone.Parent = player.PlayerGui 
 
-							repeat wait(1)
-								clone.Bar.Size = UDim2.new(0, timer * 15.5, 0, 20) 
-								timer -= 1
-							until timer <= 0
-							
-							clone:Destroy()
+					repeat wait(1)
+						if clone then 
+							clone.Bar.Size = UDim2.new(0, timer * 15.5, 0, 20) 
+							timer -= 1
+						else
+							break
 						end
-					end
+					until timer <= 0
+					
+					clone:Destroy()
 				
 					wait(timeaccerlerationtime.Value + 40)
 					debounce = false
@@ -82,4 +83,4 @@ tool.Unequipped:Connect(function()
 	if equipped == true then
 		equipped = false
 	end
-end)
+end) 
