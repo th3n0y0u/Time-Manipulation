@@ -1,7 +1,8 @@
 local tool = script.Parent
-local char
-local humanoid
-local animator
+local player = game.Players:GetPlayerFromCharacter(tool.Parent) or tool.Parent.Parent
+local char = player.Character or player.CharacterAdded:Wait()
+local humanoid = char:WaitForChild("Humanoid")
+local animator = humanoid:WaitForChild("Animator")
 local runservice = game:GetService("RunService")
 local events = tool:WaitForChild("Events")
 local values = tool:WaitForChild("Settings")
@@ -20,7 +21,11 @@ local animations = {
 	animation.TimeStop
 }
 
-local loadedanimations
+loadedanimations = {
+	animator:LoadAnimation(animations[1]),
+	animator:LoadAnimation(animations[2]),
+	animator:LoadAnimation(animations[3])
+} 
 local equipped = false
 
 local function stoptime(player) 
@@ -55,7 +60,7 @@ local function stoptime(player)
 			local function anchorchildren(object) 
 				for _,v in pairs(object:GetChildren()) do
 				if v:IsA("Part") then
-					if v.Parent ~= tool.Parent or v.Parent ~= tool then 
+					if v.Parent ~= char and v.Parent ~= tool then 
 						v.Anchored = true
 					end
 			    end
@@ -63,77 +68,84 @@ local function stoptime(player)
 			    end
 			end
 			
-			anchorchildren(game.Workspace) 
 			stoptimesound1()
+			local timer = timestoptime.Value
 			tool.Parent.HumanoidRootPart.Anchored = false
 			tool.Handle.Anchored = false
 			game.Lighting.Ambient = Color3.new(0, 0, 0.498039)
 			game.Lighting.OutdoorAmbient = Color3.new(0, 0, 0.498039)
 			
-			for i, v in pairs(game.Players:GetChildren()) do
-				if v ~= player then
-					local health = v.Character.Humanoid.Health
-					local damagetakenduringtimestop = 0
-					local timer = timestoptime.Value
-					
-					local clone = script.Reset:Clone()
-					v.Character.Humanoid.WalkSpeed = 0
-					v.Character.Humanoid.JumpPower = 0
-					v.Character.Humanoid:UnequipTools()
-					clone.Parent = v.PlayerGui
-					clone.Disabled = false 			
-					
-					while timer > 0 do 
-						
-						local function check(item)
-							if item:IsA("Tool") then
-								v.Character.Humanoid.Health -= 1
-								item.Parent = game.Players:GetPlayerFromCharacter(item.Parent).Backpack 
-							end
-						end
-						
-						local function change(value)
-							damagetakenduringtimestop += health - v.Character.Humanoid.Health
-							v.Character.Humanoid.Health = health
-							clone:Destroy()
-						end 
-						
-						if timer <= 0 then
-							v.Character.Humanoid.WalkSpeed = 16 
-							v.Character.Humanoid:TakeDamage(damagetakenduringtimestop / 4)  
+			while timer > 0 and wait() do
+				for i, v in pairs(game.Players:GetChildren()) do
+					if v ~= player and v then
+						if (player.Character.UpperTorso.Position - v.Character.UpperTorso.Position).Magnitude < 50 then 
+							local char = v.Character or v.CharacterAdded:Wait()
+							local hum = char:WaitForChild("Humanoid")
+							local health = hum.Health
 							
-							for i, v in pairs(v.Character:GetChildren()) do
-								if v:IsA("MeshPart") then
-									v.Anchored = false
+							local clone = script.Reset:Clone()
+							v.Character.Humanoid.WalkSpeed = 0
+							v.Character.Humanoid.JumpPower = 0
+							v.Character.Humanoid:UnequipTools()
+							clone.Parent = v.PlayerGui
+							clone.Disabled = false 			
+							
+							local function check(item)
+								if item:IsA("Tool") then
+									v.Character.Humanoid.Health -= 1
+									item.Parent = game.Players:GetPlayerFromCharacter(item.Parent).Backpack 
 								end
+							end
+							
+							if timer <= 1 then
+								v.Character.Humanoid.WalkSpeed = 16 
+								v.Character.Humanoid.JumpPower = 50
+								
+								for i, v in pairs(v.Character:GetChildren()) do
+									if v:IsA("MeshPart") then
+										v.Anchored = false
+									end
+								end 
+								break
 							end 
 							
-						end 
-						
-						v.Character.ChildAdded:Connect(check)
-						v.Character.Humanoid.Health.Changed:Connect(change)
-						timer -= 1
-						wait(1)
-						
+							anchorchildren(v.Character) 
+							char.ChildAdded:Connect(check)
+						else
+							timer -= 1
+							wait(1)  
+						end
 					end
 				end
 			end
-			
-			tool.Parent.Humanoid:UnequipTools()
+			 
+			humanoid:UnequipTools()
+
+			local function remove()
+				for i, v in pairs(game.Players:GetChildren()) do
+					if v and v ~= player then
+						v.Character.Humanoid.WalkSpeed = 16
+						v.Character.Humanoid.JumpPower = 50
+						local reset = v.PlayerGui:WaitForChild("Reset")
+						reset:Destroy()
+					end
+				end
+			end
+
 			local function unanchorchildren(object) 
 				for _,v in pairs(object:GetChildren()) do
 					if v:IsA("Part") then
-						if v.Parent.Parent ~= game.Workspace.WeaponLineUp or v.Parent:IsA("Tool") then
-							if v ~= game.Workspace.SpawnLocation then
-								if v:IsA("Model") then
-									v.Anchored = false 
-								end
+						if v.Parent:IsA("Tool") or v.Parent:IsA("Model") then
+							if v.Parent:FindFirstChild("Humanoid") or v.Parent.Parent:FindFirstChild("Humanoid") then
+								v.Anchored = false 
 							end
 						end
 					end
 					unanchorchildren(v)
 				end
 			end
+
+			remove()
 			unanchorchildren(game.Workspace) 
 			stoptimesound2() 
 			game.Lighting.Ambient = Color3.new(0.27451, 0.27451, 0.27451)
@@ -201,6 +213,23 @@ local function erasetime(player)
 					local secondsposition = v.Character.HumanoidRootPart.Position
 					repeat
 						
+						local head = v.Character:WaitForChild("Head")
+						local humanoidrootpart = v.Character:WaitForChild("HumanoidRootPart")
+						local uppertorso = v.Character:WaitForChild("UpperTorso")
+						local lowertorso = v.Character:WaitForChild("LowerTorso")
+						local rightupperarm = v.Character:WaitForChild("RightUpperArm")
+						local rightlowerarm = v.Character:WaitForChild("RightLowerArm")
+						local righthand = v.Character:WaitForChild("RightHand")
+						local leftupperarm = v.Character:WaitForChild("LeftUpperArm")
+						local leftlowerarm = v.Character:WaitForChild("LeftLowerArm")
+						local lefthand = v.Character:WaitForChild("LeftHand")
+						local rightupperleg = v.Character:WaitForChild("RightUpperLeg")
+						local rightlowerleg = v.Character:WaitForChild("RightLowerLeg")
+						local rightfoot = v.Character:WaitForChild("RightFoot")
+						local leftupperleg = v.Character:WaitForChild("LeftUpperLeg")
+						local leftlowerleg = v.Character:WaitForChild("LeftLowerLeg")
+						local leftfoot = v.Character:WaitForChild("LeftFoot") 
+						
 						local function check(item)
 							if item:IsA("Tool") then
 								item.Parent = game.Players:GetPlayerFromCharacter(item.Parent).Backpack
@@ -211,6 +240,23 @@ local function erasetime(player)
 						
 						local clone = game.ServerStorage.TimeErase:Clone()
 						clone.HumanoidRootPart.CFrame = CFrame.new(position)
+						clone.Head.Orientation = head.Orientation + Vector3.new(-head.Orientation.X, head.Orientation.Y, -head.Orientation.Z) 
+						clone.HumanoidRootPart.Orientation = humanoidrootpart.Orientation + Vector3.new(-humanoidrootpart.Orientation.X, humanoidrootpart.Orientation.Y, -humanoidrootpart.Orientation.Z)
+						clone.UpperTorso.Orientation = uppertorso.Orientation + Vector3.new(-uppertorso.Orientation.X, uppertorso.Orientation.Y, -uppertorso.Orientation.Z) 
+						clone.LowerTorso.Orientation = lowertorso.Orientation + Vector3.new(-lowertorso.Orientation.X, lowertorso.Orientation.Y, -lowertorso.Orientation.Z) 
+						clone.RightUpperArm.Orientation = rightupperarm.Orientation + Vector3.new(-rightupperarm.Orientation.X, rightupperarm.Orientation.Y, -rightupperarm.Orientation.Z) 
+						clone.RightLowerArm.Orientation = rightlowerarm.Orientation + Vector3.new(-rightlowerarm.Orientation.X, rightlowerarm.Orientation.Y, -rightlowerarm.Orientation.Z) 
+						clone.RightHand.Orientation = righthand.Orientation + Vector3.new(-righthand.Orientation.X, righthand.Orientation.Y, -righthand.Orientation.Z) 
+						clone.LeftUpperArm.Orientation = leftupperarm.Orientation + Vector3.new(-leftupperarm.Orientation.X, leftupperarm.Orientation.Y, -leftupperarm.Orientation.Z) 
+						clone.LeftLowerArm.Orientation = leftlowerarm.Orientation + Vector3.new(-leftlowerarm.Orientation.X, leftlowerarm.Orientation.Y, -leftlowerarm.Orientation.Z) 
+						clone.LeftHand.Orientation = lefthand.Orientation + Vector3.new(-lefthand.Orientation.X, lefthand.Orientation.Y, -lefthand.Orientation.Z) 
+						clone.RightUpperLeg.Orientation = rightupperleg.Orientation + Vector3.new(-rightupperleg.Orientation.X, rightupperleg.Orientation.Y, -rightupperleg.Orientation.Z) 
+						clone.RightLowerLeg.Orientation = rightlowerleg.Orientation + Vector3.new(-rightlowerleg.Orientation.X, rightlowerleg.Orientation.Y, -rightlowerleg.Orientation.Z) 
+						clone.RightFoot.Orientation = rightfoot.Orientation + Vector3.new(-rightfoot.Orientation.X, rightfoot.Orientation.Y, -rightfoot.Orientation.Z) 
+						clone.LeftUpperLeg.Orientation = leftupperleg.Orientation + Vector3.new(-leftupperleg.Orientation.X, leftupperleg.Orientation.Y, -leftupperleg.Orientation.Z) 
+						clone.LeftLowerLeg.Orientation = leftlowerleg.Orientation + Vector3.new(-leftlowerleg.Orientation.X, leftlowerleg.Orientation.Y, -leftlowerleg.Orientation.Z) 
+						clone.LeftFoot.Orientation = leftfoot.Orientation + Vector3.new(-leftfoot.Orientation.X, leftfoot.Orientation.Y, -leftfoot.Orientation.Z)  
+						 
 						clone.Parent = game.Workspace
 						
 						v.Character.ChildAdded:Connect(check)
@@ -332,12 +378,22 @@ end
 
 local function death()
 	local function one()
-		tool.Parent.Humanoid:UnequipTools()
+		local function remove()
+			for i, v in pairs(game.Players:GetChildren()) do
+				if v and v ~= player then
+					v.Character.Humanoid.WalkSpeed = 16
+					v.Character.Humanoid.JumpPower = 50
+					local reset = v.PlayerGui:WaitForChild("Reset")
+					reset:Destroy()
+				end
+			end
+		end
+
 		local function unanchorchildren(object) 
 			for _,v in pairs(object:GetChildren()) do
 				if v:IsA("Part") then
-					if (v.Parent:IsA("Model") and v.Parent.Parent ~= game.Workspace.WeaponLineUp) or v.Parent:IsA("Tool") then
-						if v ~= game.Workspace.SpawnLocation then
+					if v.Parent:IsA("Tool") or v.Parent:IsA("Model") then
+						if v.Parent:FindFirstChild("Humanoid") or v.Parent.Parent:FindFirstChild("Humanoid") then
 							v.Anchored = false 
 						end
 					end
@@ -345,24 +401,25 @@ local function death()
 				unanchorchildren(v)
 			end
 		end
+
+		remove()
 		unanchorchildren(game.Workspace) 
 		game.Lighting.Ambient = Color3.new(0.27451, 0.27451, 0.27451)
 		game.Lighting.OutdoorAmbient = Color3.new(0.27451, 0.27451, 0.27451)  
-		game.ReplicatedStorage.TimeStop.Value = false
 	end
 
 	local function two()
-		tool.Parent.Humanoid.WalkSpeed = 16
+		humanoid.WalkSpeed = 16
 		game.Lighting.TimeOfDay = "14:30:00"
 		for v = 1, 3 do
 			local object
 
 			if v == 1 then
-				object = tool.Parent.RightUpperArm
+				object = char.RightUpperArm
 			elseif v == 2 then
-				object = tool.Parent.LeftUpperArm
+				object = char.LeftUpperArm 
 			else
-				object = tool.Parent.HumanoidRootPart
+				object = char.HumanoidRootPart
 			end
 
 			for i, v in pairs(object:GetChildren()) do
@@ -403,14 +460,12 @@ end
 local function equip()
 	if equipped == false then
 		equipped = true
-		char = tool.Parent
 	end
 end
 
 local function unequip()
 	if equipped == true then
 		equipped = false
-		char = tool.Parent.Parent.Character
 	end 
 end 
 
@@ -418,14 +473,5 @@ TimeStop.OnServerEvent:Connect(stoptime)
 TimeErase.OnServerEvent:Connect(erasetime)
 TimeAcceleration.OnServerEvent:Connect(accerleratetime)
 tool.Equipped:Connect(equip)
-tool.Unequipped:Connect(unequip)
-if char then
-	char.Humanoid.Died:Connect(death)
-	humanoid = char.Humanoid
-	animator = humanoid.Animator
-	loadedanimations = {
-		animator:LoadAnimation(animations[1]),
-		animator:LoadAnimation(animations[2]),
-		animator:LoadAnimation(animations[3])
-	}
-end
+tool.Unequipped:Connect(unequip) 
+humanoid.Died:Connect(death) 
